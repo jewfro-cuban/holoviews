@@ -14,6 +14,7 @@ from .chart import Curve
 from .graphs import TriMesh
 from .tabular import Table
 from .util import compute_slice_bounds, categorical_aggregate2d
+from ..util import opts
 
 
 class Raster(Element2D):
@@ -47,10 +48,10 @@ class Raster(Element2D):
             extents = (0, 0, d2, d1)
         super(Raster, self).__init__(data, kdims=kdims, vdims=vdims, extents=extents, **params)
 
-
     def __getitem__(self, slices):
-        if slices in self.dimensions(): return self.dimension_values(slices)
-        slices = util.process_ellipses(self,slices)
+        if slices in self.dimensions():
+            return self.dimension_values(slices)
+        slices = util.process_ellipses(self, slices)
         if not isinstance(slices, tuple):
             slices = (slices, slice(None))
         elif len(slices) > (2 + self.depth):
@@ -68,7 +69,6 @@ class Raster(Element2D):
             return self.clone(np.expand_dims(data, axis=slc_types.index(True)),
                               extents=None)
 
-
     def range(self, dim, data_range=True, dimension_range=True):
         idx = self.get_dimension_index(dim)
         if data_range and idx == 2:
@@ -78,7 +78,6 @@ class Raster(Element2D):
                 return lower, upper
             return util.dimension_range(lower, upper, dimension.range, dimension.soft_range)
         return super(Raster, self).range(dim, data_range, dimension_range)
-
 
     def dimension_values(self, dim, expanded=True, flat=True):
         """
@@ -98,14 +97,12 @@ class Raster(Element2D):
         else:
             return super(Raster, self).dimension_values(dim)
 
-
     @classmethod
     def collapse_data(cls, data_list, function, kdims=None, **kwargs):
         if isinstance(function, np.ufunc):
             return function.reduce(data_list)
         else:
             return function(np.dstack(data_list), axis=-1, **kwargs)
-
 
     def sample(self, samples=[], **sample_values):
         """
@@ -127,9 +124,9 @@ class Raster(Element2D):
         if len(sample_values) == self.ndims or len(samples):
             if not len(samples):
                 samples = zip(*[c if isinstance(c, list) else [c] for _, c in
-                               sorted([(self.get_dimension_index(k), v) for k, v in
-                                       sample_values.items()])])
-            table_data = [c+(self._zdata[self._coord2matrix(c)],)
+                                sorted([(self.get_dimension_index(k), v) for k, v in
+                                        sample_values.items()])])
+            table_data = [c + (self._zdata[self._coord2matrix(c)],)
                           for c in samples]
             params['kdims'] = self.kdims
             return Table(table_data, **params)
@@ -149,16 +146,16 @@ class Raster(Element2D):
             # Generate sample slice
             sample = [slice(None) for i in range(self.ndims)]
             coord_fn = (lambda v: (v, 0)) if not sample_ind else (lambda v: (0, v))
-            sample[sample_ind] = self._coord2matrix(coord_fn(sample_coord))[abs(sample_ind-1)]
+            sample[sample_ind] = self._coord2matrix(coord_fn(sample_coord))[abs(sample_ind - 1)]
 
             # Sample data
             x_vals = self.dimension_values(other_dimension[0].name, False)
             ydata = self._zdata[sample[::-1]]
-            if hasattr(self, 'bounds') and sample_ind == 0: ydata = ydata[::-1]
+            if hasattr(self, 'bounds') and sample_ind == 0:
+                ydata = ydata[::-1]
             data = list(zip(x_vals, ydata))
             params['kdims'] = other_dimension
             return Curve(data, **params)
-
 
     def reduce(self, dimensions=None, function=None, **reduce_map):
         """
@@ -188,21 +185,16 @@ class Raster(Element2D):
             params.pop('extents', None)
             return Table(data, **params)
 
-
     @property
     def depth(self):
         return len(self.vdims)
-
 
     @property
     def _zdata(self):
         return self.data
 
-
     def _coord2matrix(self, coord):
         return int(round(coord[1])), int(round(coord[0]))
-
-
 
 
 class Image(Dataset, Raster, SheetCoordinateSystem):
@@ -263,16 +255,19 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
             bounds = bounds or data.bounds
             xdensity = xdensity or data.xdensity
             ydensity = ydensity or data.ydensity
-            if rtol is None: rtol = data.rtol
+            if rtol is None:
+                rtol = data.rtol
 
         extents = extents if extents else (None, None, None, None)
         if (data is None
             or (isinstance(data, (list, tuple)) and not data)
-            or (isinstance(data, np.ndarray) and data.size == 0)):
+                or (isinstance(data, np.ndarray) and data.size == 0)):
             data = data if isinstance(data, np.ndarray) and data.ndim == 2 else np.zeros((0, 0))
             bounds = 0
-            if not xdensity: xdensity = 1
-            if not ydensity: ydensity = 1
+            if not xdensity:
+                xdensity = 1
+            if not ydensity:
+                ydensity = 1
         elif isinstance(data, np.ndarray) and data.ndim != self._ndim:
             raise ValueError('%s type expects %d-D array received %d-D'
                              'array.' % (self._ndim, data.ndim))
@@ -316,7 +311,6 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
         SheetCoordinateSystem.__init__(self, bounds, xdensity, ydensity)
         self._validate(data_bounds, supplied_bounds)
 
-
     def _validate(self, data_bounds, supplied_bounds):
         if len(self.shape) == 3:
             if self.shape[2] != len(self.vdims):
@@ -346,12 +340,12 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
 
         if data_bounds is None:
             (x0, x1), (y0, y1) = (self.interface.range(self, kd.name) for kd in self.kdims)
-            xstep = (1./self.xdensity)/2.
-            ystep = (1./self.ydensity)/2.
+            xstep = (1. / self.xdensity) / 2.
+            ystep = (1. / self.ydensity) / 2.
             if not isinstance(x0, util.datetime_types):
-                x0, x1 = (x0-xstep, x1+xstep)
+                x0, x1 = (x0 - xstep, x1 + xstep)
             if not isinstance(y0, util.datetime_types):
-                y0, y1 = (y0-ystep, y1+ystep)
+                y0, y1 = (y0 - ystep, y1 + ystep)
             bounds = (x0, y0, x1, y1)
         else:
             bounds = data_bounds
@@ -370,7 +364,6 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
                              'are supplied, otherwise they must match the data. To change '
                              'the displayed extents set the range on the x- and y-dimensions.')
 
-
     def __setstate__(self, state):
         """
         Ensures old-style unpickled Image types without an interface
@@ -382,7 +375,6 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
         if isinstance(self.data, np.ndarray):
             self.interface = ImageInterface
         super(Dataset, self).__setstate__(state)
-
 
     def clone(self, data=None, shared_data=True, new_type=None, *args, **overrides):
         """
@@ -399,11 +391,9 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
             overrides = dict(sheet_params, **overrides)
         return super(Image, self).clone(data, shared_data, new_type, *args, **overrides)
 
-
     def aggregate(self, dimensions=None, function=None, spreadfn=None, **kwargs):
         agg = super(Image, self).aggregate(dimensions, function, spreadfn, **kwargs)
         return Curve(agg) if isinstance(agg, Dataset) and len(self.vdims) == 1 else agg
-
 
     def select(self, selection_specs=None, **selection):
         """
@@ -432,16 +422,16 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
 
             # Situate resampled region into overall slice
             y0, y1, x0, x1 = Slice(bounds, self)
-            y0, y1 = shape[0]-y1, shape[0]-y0
+            y0, y1 = shape[0] - y1, shape[0] - y0
             selection = (slice(y0, y1), slice(x0, x1))
             sliced = True
         else:
             y, x = self.sheet2matrixidx(coords[0], coords[1])
-            y = shape[0]-y-1
+            y = shape[0] - y - 1
             selection = (y, x)
             sliced = False
 
-        datatype = list(util.unique_iterator([self.interface.datatype]+self.datatype))
+        datatype = list(util.unique_iterator([self.interface.datatype] + self.datatype))
         data = self.interface.ndloc(self, selection)
         if not sliced:
             if np.isscalar(data):
@@ -453,7 +443,6 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
         else:
             return self.clone(data, xdensity=self.xdensity, datatype=datatype,
                               ydensity=self.ydensity, bounds=bounds)
-
 
     def sample(self, samples=[], **kwargs):
         """
@@ -485,8 +474,8 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
                 sel = {kd.name: s for kd, s in zip(self.kdims, sample)}
                 dims = [kd for kd, v in sel.items() if not np.isscalar(v)]
                 selection = self.select(**sel)
-                selection = tuple(selection.columns(kdims+self.vdims).values())
-                datatype = list(util.unique_iterator(self.datatype+['dataframe', 'dict']))
+                selection = tuple(selection.columns(kdims + self.vdims).values())
+                datatype = list(util.unique_iterator(self.datatype + ['dataframe', 'dict']))
                 return self.clone(selection, kdims=kdims, new_type=Curve,
                                   datatype=datatype)
             else:
@@ -500,10 +489,10 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
         if isinstance(ys[0], util.datetime_types):
             ys = np.array(ys).astype(np.datetime64)
         yidx, xidx = self.sheet2matrixidx(np.array(xs), np.array(ys))
-        yidx = shape[0]-yidx-1
+        yidx = shape[0] - yidx - 1
 
         # Detect out-of-bounds indices
-        out_of_bounds= (yidx<0) | (xidx<0) | (yidx>=shape[0]) | (xidx>=shape[1])
+        out_of_bounds = (yidx < 0) | (xidx < 0) | (yidx >= shape[0]) | (xidx >= shape[1])
         if out_of_bounds.any():
             coords = [samples[idx] for idx in np.where(out_of_bounds)[0]]
             raise IndexError('Coordinate(s) %s out of bounds for %s with bounds %s' %
@@ -511,7 +500,6 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
 
         data = self.interface.ndloc(self, (yidx, xidx))
         return self.clone(data, new_type=Table, datatype=['dataframe', 'dict'])
-
 
     def closest(self, coords=[], **kwargs):
         """
@@ -536,7 +524,7 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
                     if len(coords) not in [0, len(v)]:
                         raise ValueError("Length of samples must match")
                     elif len(coords):
-                        coords = [(t[abs(idx-1)], c) if idx else (c, t[abs(idx-1)])
+                        coords = [(t[abs(idx - 1)], c) if idx else (c, t[abs(idx - 1)])
                                   for c, t in zip(v, coords)]
                 getter.append(idx)
         else:
@@ -549,7 +537,6 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
         else:
             return [getter(self.closest_cell_center(*el)) for el in coords]
 
-
     def range(self, dim, data_range=True, dimension_range=True):
         idx = self.get_dimension_index(dim)
         dimension = self.get_dimension(dim)
@@ -559,13 +546,12 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
                 return (b, t) if idx else (l, r)
             low, high = super(Image, self).range(dim, data_range)
             density = self.ydensity if idx else self.xdensity
-            halfd = (1./density)/2.
+            halfd = (1. / density) / 2.
             if isinstance(low, util.datetime_types):
                 halfd = np.timedelta64(int(round(halfd)), self._time_unit)
-            return (low-halfd, high+halfd)
+            return (low - halfd, high + halfd)
         else:
             return super(Image, self).range(dim, data_range, dimension_range)
-
 
     def table(self, datatype=None):
         """
@@ -580,10 +566,37 @@ class Image(Dataset, Raster, SheetCoordinateSystem):
         return self.clone(self.columns(), new_type=Table,
                           **(dict(datatype=datatype) if datatype else {}))
 
-
     def _coord2matrix(self, coord):
         return self.sheet2matrixidx(*coord)
 
+
+class ImageTL(Image):
+    """
+    Image but with anchor (0,0) at the top left corner.
+    """
+
+    group = param.String(default='ImageTL', constant=True)
+
+    def __init__(self, data, kdims=None, vdims=None, bounds=None, extents=None,
+                 xdensity=None, ydensity=None, rtol=None, **params):
+        if isinstance(data, np.ndarray):
+            H, W = data.shape[0], data.shape[1]
+            xcoords = range(W)
+            ycoords = range(H)
+            data_ = (xcoords, ycoords, data)
+            super().__init__(data_, kdims=kdims, vdims=vdims, bounds=bounds, extents=extents,
+                             xdensity=xdensity, ydensity=ydensity, rtol=rtol, **params)
+        else:
+            super().__init__(data, kdims=kdims, vdims=vdims, bounds=bounds, extents=extents,
+                             xdensity=xdensity, ydensity=ydensity, rtol=rtol, **params)
+
+        lbrt = self.bounds.lbrt()
+        W = lbrt[2] - lbrt[0]
+        H = lbrt[3] - lbrt[1]
+        aspect_ratio = W / H
+        width = 500
+        height = int(width / aspect_ratio)
+        opts("ImageTL (cmap='fire') [width={0} height={1}]".format(width, height), self)
 
 
 class RGB(Image):
@@ -616,14 +629,14 @@ class RGB(Image):
 
     group = param.String(default='RGB', constant=True)
 
-    alpha_dimension = param.ClassSelector(default=Dimension('A',range=(0,1)),
-                                          class_=Dimension, instantiate=False,  doc="""
+    alpha_dimension = param.ClassSelector(default=Dimension('A', range=(0, 1)),
+                                          class_=Dimension, instantiate=False, doc="""
         The alpha dimension definition to add the value dimensions if
         an alpha channel is supplied.""")
 
     vdims = param.List(
-        default=[Dimension('R', range=(0,1)), Dimension('G',range=(0,1)),
-                 Dimension('B', range=(0,1))], bounds=(3, 4), doc="""
+        default=[Dimension('R', range=(0, 1)), Dimension('G', range=(0, 1)),
+                 Dimension('B', range=(0, 1))], bounds=(3, 4), doc="""
         The dimension description of the data held in the matrix.
 
         If an alpha channel is supplied, the defined alpha_dimension
@@ -642,7 +655,6 @@ class RGB(Image):
         subclass of RGB.
         """
         return self
-
 
     @classmethod
     def load_image(cls, filename, height=1, array=False, bounds=None, bare=False, **kwargs):
@@ -666,21 +678,22 @@ class RGB(Image):
         """
         try:
             from matplotlib import pyplot as plt
-        except:
+        except Exception:
             raise ImportError("RGB.load_image requires matplotlib.")
 
         data = plt.imread(filename)
-        if array:  return data
+        if array:
+            return data
 
         (h, w, _) = data.shape
         if bounds is None:
             f = float(height) / h
-            xoffset, yoffset = w*f/2, h*f/2
-            bounds=(-xoffset, -yoffset, xoffset, yoffset)
+            xoffset, yoffset = w * f / 2, h * f / 2
+            bounds = (-xoffset, -yoffset, xoffset, yoffset)
         rgb = cls(data, bounds=bounds, **kwargs)
-        if bare: rgb = rgb(plot=dict(xaxis=None, yaxis=None))
+        if bare:
+            rgb = rgb(plot=dict(xaxis=None, yaxis=None))
         return rgb
-
 
     def __init__(self, data, kdims=None, vdims=None, **params):
         if isinstance(data, Overlay):
@@ -688,12 +701,12 @@ class RGB(Image):
             if not all(isinstance(im, Image) for im in images):
                 raise ValueError("Input overlay must only contain Image elements")
             shapes = [im.data.shape for im in images]
-            if not all(shape==shapes[0] for shape in shapes):
+            if not all(shape == shapes[0] for shape in shapes):
                 raise ValueError("Images in the input overlays must contain data of the consistent shape")
             ranges = [im.vdims[0].range for im in images]
             if any(None in r for r in ranges):
                 raise ValueError("Ranges must be defined on all the value dimensions of all the Images")
-            arrays = [(im.data - r[0]) / (r[1] - r[0]) for r,im in zip(ranges, images)]
+            arrays = [(im.data - r[0]) / (r[1] - r[0]) for r, im in zip(ranges, images)]
             data = np.dstack(arrays)
         if vdims is None:
             vdims = list(self.vdims)
@@ -703,7 +716,6 @@ class RGB(Image):
             if data.shape[-1] == 4 and len(vdims) == 3:
                 vdims.append(self.alpha_dimension)
         super(RGB, self).__init__(data, kdims=kdims, vdims=vdims, **params)
-
 
 
 class HSV(RGB):
@@ -736,15 +748,15 @@ class HSV(RGB):
 
     group = param.String(default='HSV', constant=True)
 
-    alpha_dimension = param.ClassSelector(default=Dimension('A',range=(0,1)),
-                                          class_=Dimension, instantiate=False,  doc="""
+    alpha_dimension = param.ClassSelector(default=Dimension('A', range=(0, 1)),
+                                          class_=Dimension, instantiate=False, doc="""
         The alpha dimension definition to add the value dimensions if
         an alpha channel is supplied.""")
 
     vdims = param.List(
-        default=[Dimension('H', range=(0,1), cyclic=True),
-                 Dimension('S',range=(0,1)),
-                 Dimension('V', range=(0,1))], bounds=(3, 4), doc="""
+        default=[Dimension('H', range=(0, 1), cyclic=True),
+                 Dimension('S', range=(0, 1)),
+                 Dimension('V', range=(0, 1))], bounds=(3, 4), doc="""
         The dimension description of the data held in the array.
 
         If an alpha channel is supplied, the defined alpha_dimension
@@ -768,7 +780,7 @@ class HSV(RGB):
 
         params = util.get_param_values(self)
         del params['vdims']
-        return RGB(coords+hsv, bounds=self.bounds,
+        return RGB(coords + hsv, bounds=self.bounds,
                    xdensity=self.xdensity, ydensity=self.ydensity,
                    **params)
 
@@ -813,7 +825,6 @@ class QuadMesh(Dataset, Element2D):
                             "element or aggregate the data." %
                             (type(self).__name__, self.interface.__name__))
 
-
     def __setstate__(self, state):
         """
         Ensures old-style QuadMesh types without an interface can be unpickled.
@@ -827,7 +838,6 @@ class QuadMesh(Dataset, Element2D):
             data = state['data']
             state['data'] = {x.name: data[0], y.name: data[1], z.name: data[2]}
         super(Dataset, self).__setstate__(state)
-
 
     def trimesh(self):
         """
@@ -850,13 +860,13 @@ class QuadMesh(Dataset, Element2D):
         shape = self.dimension_values(2, flat=False).shape
         s0 = shape[0]
         t1 = np.arange(np.product(shape))
-        js = (t1//s0)
-        t1s = js*(s0+1)+t1%s0
-        t2s = t1s+1
-        t3s = (js+1)*(s0+1)+t1%s0
+        js = (t1 // s0)
+        t1s = js * (s0 + 1) + t1 % s0
+        t2s = t1s + 1
+        t3s = (js + 1) * (s0 + 1) + t1 % s0
         t4s = t2s
         t5s = t3s
-        t6s = t3s+1
+        t6s = t3s + 1
         t1 = np.concatenate([t1s, t6s])
         t2 = np.concatenate([t2s, t5s])
         t3 = np.concatenate([t3s, t4s])
@@ -868,12 +878,11 @@ class QuadMesh(Dataset, Element2D):
         # Construct TriMesh
         params = util.get_param_values(self)
         params['kdims'] = params['kdims'] + TriMesh.node_type.kdims[2:]
-        nodes = TriMesh.node_type(vertices+(np.arange(len(vertices[0])),),
+        nodes = TriMesh.node_type(vertices + (np.arange(len(vertices[0])),),
                                   **{k: v for k, v in params.items()
                                      if k != 'vdims'})
         return TriMesh(((ts,), nodes), **{k: v for k, v in params.items()
                                           if k != 'kdims'})
-
 
 
 class HeatMap(Dataset, Element2D):

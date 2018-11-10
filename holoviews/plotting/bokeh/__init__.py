@@ -8,7 +8,7 @@ from bokeh.palettes import all_palettes
 
 from ...core import (Store, Overlay, NdOverlay, Layout, AdjointLayout,
                      GridSpace, GridMatrix, NdLayout, config)
-from ...element import (Curve, Points, Scatter, Image, Raster, Path,
+from ...element import (Curve, Points, Scatter, Image,ImageTL, Raster, Path,
                         RGB, Histogram, Spread, HeatMap, Contours, Bars,
                         Box, Bounds, Ellipse, Polygons, BoxWhisker, Arrow,
                         ErrorBars, Text, HLine, VLine, Spline, Spikes,
@@ -51,6 +51,7 @@ from .util import bokeh_version # noqa (API import)
 
 Store.renderers['bokeh'] = BokehRenderer.instance()
 
+
 if len(Store.renderers) == 1:
     Store.current_backend = 'bokeh'
 
@@ -76,6 +77,7 @@ associations = {Overlay: OverlayPlot,
 
                 # Rasters
                 Image: RasterPlot,
+                ImageTL: RasterPlot,
                 RGB: RGBPlot,
                 HSV: HSVPlot,
                 Raster: RasterPlot,
@@ -189,6 +191,8 @@ options.Polygons = Options('style', color=Cycle(), line_color='black',
 
 # Rasters
 options.Image = Options('style', cmap=dflt_cmap)
+options.ImageTL = Options('style', cmap=dflt_cmap)
+options.ImageTL = Options('plot', invert_yaxis=True)
 options.Raster = Options('style', cmap=dflt_cmap)
 options.QuadMesh = Options('style', cmap=dflt_cmap, line_alpha=0)
 options.HeatMap = Options('style', cmap='RdYlBu_r', annular_line_alpha=0,
