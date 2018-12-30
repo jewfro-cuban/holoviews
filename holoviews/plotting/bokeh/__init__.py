@@ -8,8 +8,8 @@ from bokeh.palettes import all_palettes
 
 from ...core import (Store, Overlay, NdOverlay, Layout, AdjointLayout,
                      GridSpace, GridMatrix, NdLayout, config)
-from ...element import (Curve, Points, Scatter, Image,ImageTL, Raster, Path,
-                        RGB, Histogram, Spread, HeatMap, Contours, Bars,
+from ...element import (Curve, Points, Scatter, Image, ImageTL, Raster, Path,
+                        RGB, RGBTL, Histogram, Spread, HeatMap, Contours, Bars,
                         Box, Bounds, Ellipse, Polygons, BoxWhisker, Arrow,
                         ErrorBars, Text, HLine, VLine, Spline, Spikes,
                         Table, ItemTable, Area, HSV, QuadMesh, VectorField,
@@ -79,6 +79,7 @@ associations = {Overlay: OverlayPlot,
                 Image: RasterPlot,
                 ImageTL: RasterPlot,
                 RGB: RGBPlot,
+                RGBTL: RGBPlot,
                 HSV: HSVPlot,
                 Raster: RasterPlot,
                 HeatMap: PlotSelector(HeatMapPlot.is_radial,
@@ -198,6 +199,8 @@ options.QuadMesh = Options('style', cmap=dflt_cmap, line_alpha=0)
 options.HeatMap = Options('style', cmap='RdYlBu_r', annular_line_alpha=0,
                           xmarks_line_color="#FFFFFF", xmarks_line_width=3,
                           ymarks_line_color="#FFFFFF", ymarks_line_width=3)
+
+options.RGBTL = Options('plot', invert_yaxis=True)
 
 # Annotations
 options.HLine = Options('style', color=Cycle(), line_width=3, alpha=1)

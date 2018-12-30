@@ -593,7 +593,10 @@ class ImageTL(Image):
         lbrt = self.bounds.lbrt()
         W = lbrt[2] - lbrt[0]
         H = lbrt[3] - lbrt[1]
-        aspect_ratio = W / H
+        if H == 0:
+            aspect_ratio = 1
+        else:
+            aspect_ratio = W / H
         width = 500
         height = int(width / aspect_ratio)
         opts("ImageTL (cmap='fire') [width={0} height={1}]".format(width, height), self)
@@ -716,6 +719,33 @@ class RGB(Image):
             if data.shape[-1] == 4 and len(vdims) == 3:
                 vdims.append(self.alpha_dimension)
         super(RGB, self).__init__(data, kdims=kdims, vdims=vdims, **params)
+
+
+class RGBTL(RGB):
+    """
+    RGB but with anchor (0,0) at the top left corner.
+    """
+
+    group = param.String(default='RGBTL', constant=True)
+
+    def __init__(self, data, kdims=None, vdims=None, bounds=None, extents=None,
+                 xdensity=None, ydensity=None, rtol=None, **params):
+        if bounds is None:
+            H, W, _ = data.shape
+            bounds = (0, 0, W, H)
+        super().__init__(data[::-1, :, :], kdims=kdims, vdims=vdims, bounds=bounds, extents=extents,
+                         xdensity=xdensity, ydensity=ydensity, rtol=rtol, **params)
+
+        lbrt = self.bounds.lbrt()
+        W = lbrt[2] - lbrt[0]
+        H = lbrt[3] - lbrt[1]
+        if H == 0:
+            aspect_ratio = 1
+        else:
+            aspect_ratio = W / H
+        width = 500
+        height = int(width / aspect_ratio)
+        opts("RGBTL [width={0} height={1}]".format(width, height), self)
 
 
 class HSV(RGB):
